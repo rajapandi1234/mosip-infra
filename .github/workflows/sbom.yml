@@ -1,0 +1,40 @@
+name: Generate SBOM
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: '6.0.x'
+
+    - name: Build project
+      run: dotnet build --output buildOutput
+
+    - name: Download SBOM tool
+      run: |
+        curl -Lo $RUNNER_TEMP/sbom-tool https://github.com/microsoft/sbom-tool/releases/latest/download/sbom-tool-linux-x64
+        chmod +x $RUNNER_TEMP/sbom-tool
+
+    - name: Generate SBOM
+      run: |
+        $RUNNER_TEMP/sbom-tool generate -b ./buildOutput -bc . -pn YourProjectName -pv 1.0.0 -ps YourCompany -nsb https://sbom.yourcompany.com -V Verbose
+
+    - name: Upload SBOM artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: sbom
+        path: ./buildOutput
